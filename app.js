@@ -11,9 +11,9 @@ const ItemCtrl = (function(){
 
   const data = {
     items: [
-      {id: 1, name: `Steak Dinner`, calories: 1200},
-      {id: 2, name: `Cookies`, calories: 500},
-      {id: 3, name: `Eggs`, calories: 200}
+      // {id: 1, name: 'Steak Dinner', calories: 1200},
+      // {id: 2, name: 'Cookies', calories: 400},
+      // {id: 3, name: 'Egg', calories: 200}
     ],
 
     currentItem: null,
@@ -21,15 +21,30 @@ const ItemCtrl = (function(){
     totalCalories: 0
   }
 
-  //Public Methods
+  //public methods
   return {
+    getCalories: function(){
+      let total = 0;
+
+      data.items.forEach(function(item){
+        total += parseInt(item.calories);
+      })
+
+      data.totalCalories = total;
+
+      return data.totalCalories;
+    },
+
     logData: function(){
       return data;
     },
 
+    getItems: function(){
+      return data.items;
+    },
+
     addItem: function(name, calories){
       let ID;
-
       if(data.items.length > 0){
         ID = data.items[data.items.length - 1].id + 1;
       }else{
@@ -45,23 +60,35 @@ const ItemCtrl = (function(){
       return newItem;
     },
 
-    getItems: function(){
-      return data.items;
+    checkDupe: function(name, calories){
+      let dupe = false;
+      data.items.forEach(function(item){
+        if(item.name === name){
+          dupe = true;
+        }
+      })
+      return dupe;
+    },
+
+    deleteAllItems: function(){
+      data.items = [];
     }
   }
 
+
 })();
+
 
 //UI Controller
 const UICtrl = (function(){
-
-  //UI Selectors
   const UISelectors = {
-    itemList: '#item-list',
-    itemNameInput: '#item-name',
-    itemCaloriesInput: '#item-calories',
-    addBtn: '.add-btn',
-    backBtn: '.back-btn'
+    itemList: `#item-list`,
+    addBtn: `.add-btn`,
+    backBtn: `.back-btn`,
+    itemNameInput: `#item-name`,
+    itemCaloriesInput: `#item-calories`,
+    totalCalories: `.total-calories`,
+    clearBtn: `.clear-btn`
   }
   
   //public methods
@@ -71,22 +98,35 @@ const UICtrl = (function(){
 
       items.forEach(function(item){
         html += `
-          <li class="collection-item" id="item-${item.id}">
-            <strong>${item.name}: </strong><em>${item.calories} Calories</em>
-            <a href="#" class="secondary-content">
-              <i class="edit-item fa fa-pencil"></i>
-            </a>
-          </li>
+        <li class="collection-item" id="item-${item.id}">
+          <strong>${item.name}: </strong><em>${item.calories} Calories</em>
+          <a href="#" class="secondary-content">
+            <i class="edit-item fa fa-pencil"></i>
+          </a>
+        </li>
         `;
       })
-
       document.querySelector(UISelectors.itemList).innerHTML = html;
     },
 
-    addItemToList: function(newItem){
+    getSelectors: function(){
+      return UISelectors;
+    },
+
+    getItemInput: function(){
+      return {
+        name: document.querySelector(UISelectors.itemNameInput).value,
+        calories: document.querySelector(UISelectors.itemCaloriesInput).value
+      }
+    },
+
+    addItemToList: function(item){
+      //Show the itemList
+      document.querySelector(UISelectors.itemList).style.display = `block`;
+
       let html = `
-        <li class="collection-item" id="item-${newItem.id}">
-          <strong>${newItem.name}: </strong><em>${newItem.calories} Calories</em>
+        <li class="collection-item" id="item-${item.id}">
+          <strong>${item.name}: </strong><em>${item.calories} Calories</em>
           <a href="#" class="secondary-content">
             <i class="edit-item fa fa-pencil"></i>
           </a>
@@ -96,48 +136,105 @@ const UICtrl = (function(){
       document.querySelector(UISelectors.itemList).innerHTML += html;
     },
 
-    getItemInput: function(){
-      return{
-        name: document.querySelector(UISelectors.itemNameInput).value,
-        calories: document.querySelector(UISelectors.itemCaloriesInput).value
-      }
+    showAlert: function(message, className){
+      (function clearAlerts(){
+        const currentAlert = document.querySelector('.alert');
+        if(currentAlert){
+          currentAlert.remove();
+        }
+      })();
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(message));
+      div.className = `alert ${className}`;
+
+      const card = document.querySelector('.card-content');
+      const title = document.querySelector('.card-title');
+
+      card.insertBefore(div, title);
+
+      setTimeout(function(){
+        const currentAlert = document.querySelector('.alert');
+        if(currentAlert){
+          currentAlert.remove();
+        }
+      }, 3000)
     },
 
-    getSelectors: function(){
-      return UISelectors;
+    clearInputs: function(){
+      document.querySelector(UISelectors.itemNameInput).value = '';
+      document.querySelector(UISelectors.itemCaloriesInput).value = '';
+    },
+
+    hideList: function(){
+      document.querySelector(UISelectors.itemList).style.display = `none`;
+    },
+
+    updateCalories: function(totalCal){
+      document.querySelector(UISelectors.totalCalories).textContent = totalCal;
     }
   }
 })();
 
+
 //App Controller
 const App = (function(ItemCtrl, UICtrl){
-  //LoadEventListners function
-  const loadEventListeners = function(){
-    //get uiselectors from UICtrl
-    const UISelectors = UICtrl.getSelectors();
 
-    document.querySelector(UISelectors.addBtn).addEventListener('click', addItemSubmit);
+  //Grab UISelectors from UICtrl
+  const UISelectors = UICtrl.getSelectors();
+  //loadEventListeners
+  const loadEventListeners = function(){
+    document.querySelector(UISelectors.addBtn).addEventListener('click', itemAddSubmit);
+    document.querySelector(UISelectors.clearBtn).addEventListener('click', clearAllItems);
   }
 
-  //addItemSubmit function
-  const addItemSubmit = function(e){
-    const input = UICtrl.getItemInput();
+  //clearBtn function clearAllItems
+  const clearAllItems = function(){
+    document.querySelector(UISelectors.itemList).innerHTML = '';
+    UICtrl.hideList();
+    ItemCtrl.deleteAllItems();
+    const totalCal = ItemCtrl.getCalories();
+    UICtrl.updateCalories(totalCal);
+  }
 
-    //Validate the inputs empty
-    if(input.name !== '' && input.calories !== ''){
-      const newItem = ItemCtrl.addItem(input.name, input.calories);
-      UICtrl.addItemToList(newItem);
+  //itemAddSubmit function
+  const itemAddSubmit = function(e){
+    const inputs = UICtrl.getItemInput();
+
+    if(inputs.name !== '' && inputs.calories !== ''){
+      const dupe = ItemCtrl.checkDupe(inputs.name, inputs.calories);
+      if(dupe === true){
+        UICtrl.showAlert(`This is a duplicate.`, `alert-danger`);
+      }else{
+        const newItem = ItemCtrl.addItem(inputs.name, inputs.calories);
+        const totalCal = ItemCtrl.getCalories();
+        UICtrl.updateCalories(totalCal);
+        UICtrl.addItemToList(newItem);
+        UICtrl.clearInputs();
+      }
+    }else{
+      UICtrl.showAlert(`Please enter all fields`, `alert-danger`);
     }
+
+    e.preventDefault();
   }
   
-  //Public Methods
+  //public methods
   return {
     init: function(){
-      console.log(`Initializing...`);
+      console.log(`Initialized...`);
+
       const items = ItemCtrl.getItems();
+      //Check if there are any items
+      if(items.length === 0){
+        UICtrl.hideList();
+      }else{ 
+        UICtrl.populateItemList(items);
+      }
+      //Get the total calories and show on app
+      const totalCal = ItemCtrl.getCalories();
+      UICtrl.updateCalories(totalCal);
 
-      UICtrl.populateItemList(items);
-
+      //Load event listeners
       loadEventListeners();
     }
   }
