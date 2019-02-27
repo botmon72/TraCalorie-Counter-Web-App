@@ -115,6 +115,10 @@ const ItemCtrl = (function(){
       return data.totalCalories; 
     },
 
+    getItems: function(){
+      return data.items;
+    },
+
     addItem: function(name, calories){
       let ID;
       if(data.items.length >0){
@@ -203,7 +207,6 @@ const UICtrl = (function(){
         </li>
         `;
       })
-
       document.querySelector(UISelectors.itemList).innerHTML = html;
     },
     addItemToList : function(item){
